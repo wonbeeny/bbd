@@ -1,8 +1,10 @@
 from .base_outputs import (
     PreProcessOutput,
-    PostProcessOutput
+    PostProcessOutput,
+    mk_Output
 )
 from .base import (
+    Attrs,
     BasePreProcessor,
     BasePostProcessor
 )

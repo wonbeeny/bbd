@@ -127,19 +127,24 @@ class PostProcessor(BasePostProcessor):
         sheet = client.open_by_url(sheet_url)
         worksheet = sheet.get_worksheet(0)  # 첫 번째 워크시트 사용
 
-        # A, B열 데이터 읽고 빈 Row 위치 찾기
-        column_A_data = worksheet.col_values(1)  # 'A'열은 1번째 열
-        column_B_data = worksheet.col_values(2)  # 'B'열은 2번째 열
+        # D, E열 데이터 읽고 빈 Row 위치 찾기
+        column_D_data = worksheet.col_values(4)  # 'D'열은 4번째 열
+        column_E_data = worksheet.col_values(5)  # 'E'열은 5번째 열
 
         # A, B열 둘 다 비어있는 Row 찾기
-        last_row = len(column_A_data) if len(column_A_data) >= len(column_B_data) else len(column_B_data) 
+        last_row = len(column_D_data) if len(column_D_data) >= len(column_E_data) else len(column_E_data) 
         row_to_write = last_row + 1  # 둘 다 비어있는 Row
 
+        # 현재 시간
+        now = datetime.datetime.now()
+        time = now.strftime('%H:%M')
+        
         # 지출 내역 입력
-        worksheet.update_acell(f'{"B"}{row_to_write}', outputs["category"])
-        worksheet.update_acell(f'{"F"}{row_to_write}', outputs["amount"])
-        worksheet.update_acell(f'{"D"}{row_to_write}', outputs["date"])
-        worksheet.update_acell(f'{"A"}{row_to_write}', outputs["note"])
+        worksheet.update_acell(f'{"A"}{row_to_write}', outputs["date"])
+        worksheet.update_acell(f'{"C"}{row_to_write}', time)
+        worksheet.update_acell(f'{"D"}{row_to_write}', outputs["amount"])
+        worksheet.update_acell(f'{"E"}{row_to_write}', outputs["category"])
+        worksheet.update_acell(f'{"G"}{row_to_write}', outputs["note"])
     
     def run(self, user_json, user_id, outputs) -> PostProcessOutput:
         """

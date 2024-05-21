@@ -3,35 +3,18 @@ import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# 삭제할 예정
-import sys
-sys.path.append("../")
-#####
-
-from base import (
+from ..base import (
     BasePreProcessor,
     BasePostProcessor,
     PreProcessOutput,
     PostProcessOutput
 )
-from utils import (
+from ..utils import (
     format_category_match,
     format_amount,
     format_date_str,
     format_date_num
 )
-
-# from ..base import (
-#     BasePreProcessor,
-#     BasePostProcessor,
-#     PreProcessOutput,
-#     PostProcessOutput
-# )
-# from ..utils import (
-#     format_category_match,
-#     format_date_str,
-#     format_date_num
-# )
 
 class PreProcessor(BasePreProcessor):
     """

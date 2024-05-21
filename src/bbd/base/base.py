@@ -1,3 +1,6 @@
+# coding : utf-8
+# author : WONBEEN
+
 import os
 
 from abc import *

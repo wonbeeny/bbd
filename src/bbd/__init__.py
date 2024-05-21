@@ -1,3 +1,6 @@
+# coding : utf-8
+# author : WONBEEN
+
 from .bbd import worker
 
 __version__ = '0.0.1'

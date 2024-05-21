@@ -1,3 +1,6 @@
+# coding : utf-8
+# author : WONBEEN
+
 text_category = {
     "영적": ["영적", "영"],
     "지적": ["지적", "지"],

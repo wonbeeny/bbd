@@ -1,3 +1,6 @@
+# coding : utf-8
+# author : WONBEEN
+
 import copy
 import datetime
 import gspread

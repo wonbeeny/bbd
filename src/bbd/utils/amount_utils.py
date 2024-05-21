@@ -1,3 +1,6 @@
+# coding : utf-8
+# author : WONBEEN
+
 import re
 
 def format_amount(input_amount: str) -> str:

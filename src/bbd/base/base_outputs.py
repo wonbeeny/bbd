@@ -1,3 +1,6 @@
+# coding : utf-8
+# author : WONBEEN
+
 from typing import Dict, List
 from datetime import datetime
 from dataclasses import dataclass

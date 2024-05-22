@@ -15,3 +15,4 @@ def format_category_match(input_category: str) -> str:
     for category, values in text_category.items():
         if input_category in values:
             return category
+    return None

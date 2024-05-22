@@ -16,7 +16,8 @@ from ..utils import (
     format_category_match,
     format_amount,
     format_date_str,
-    format_date_num
+    format_date_num,
+    find_sheet_columns
 )
 
 class PreProcessor(BasePreProcessor):
@@ -50,7 +51,7 @@ class PreProcessor(BasePreProcessor):
             result_dict["date"] = components[2]
             result_dict["note"] = components[3]
         else:    # / 가 5개 이상인 경우 에러 발생
-            self.errors.append([f"Please check `{self.user_text}`. user_text must have `/` maximum of four."])
+            self.errors.append(f"Please check `{self.user_text}`. user_text must have `/` maximum of three.")
             return None
         
         return result_dict
@@ -86,7 +87,7 @@ class PreProcessor(BasePreProcessor):
                 # 입력한 금액의 형식을 파악 후 int 형식으로 변경
                 real_amount = format_amount(amount)
 
-                # 입력한 날짜가 숫자 형식인지 아닌지 파악 후 YY.MM.DD 형식으로 변경
+                # 입력한 날짜가 숫자 형식인지 아닌지 파악 후 YYYY.MM.DD 형식으로 변경
                 try:    # 숫자 형식
                     check_type = copy.copy(date)
                     for separator in [".", ",", "-"]:
@@ -119,7 +120,7 @@ class PreProcessor(BasePreProcessor):
 class PostProcessor(BasePostProcessor):
     """
     PreProcessor 에서 추출한 결과를 활용하여 고객의 구글 스프레드 시트에 저장하는 클래스
-    """
+    """    
     def append_value_to_column(self, json_key_path, sheet_url, outputs):
         # 구글 인증
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -128,14 +129,18 @@ class PostProcessor(BasePostProcessor):
 
         # 스프레드시트 오픈
         sheet = client.open_by_url(sheet_url)
-        worksheet = sheet.get_worksheet(0)  # 첫 번째 워크시트 사용
-
+        worksheet = sheet.get_worksheet("지출 내역")  # 워크시트는 "지출 내역" 으로 고정하여 사용
+        
+        # Column 에 대한 index 찾기
+        headers = ["날짜", "세부시간", "금액", "영지사신 구분", "비고(optional)"]    # 찾을 헤더 목록 고정하여 사용
+        column_indices = find_sheet_columns(worksheet, headers)    # 헤더에 해당하는 열 찾기
+        
         # D, E열 데이터 읽고 빈 Row 위치 찾기
-        column_D_data = worksheet.col_values(4)  # 'D'열은 4번째 열
-        column_E_data = worksheet.col_values(5)  # 'E'열은 5번째 열
+        column_amount_data = worksheet.col_values(column_indices["금액"])              # 금액 열
+        column_category_data = worksheet.col_values(column_indices["영지사신 구분"])    # 영지사신 구분 열
 
         # A, B열 둘 다 비어있는 Row 찾기
-        last_row = len(column_D_data) if len(column_D_data) >= len(column_E_data) else len(column_E_data) 
+        last_row = len(column_amount_data) if len(column_amount_data) >= len(column_category_data) else len(column_category_data) 
         row_to_write = last_row + 1  # 둘 다 비어있는 Row
 
         # 현재 시간
@@ -143,11 +148,11 @@ class PostProcessor(BasePostProcessor):
         time = now.strftime('%H:%M')
         
         # 지출 내역 입력
-        worksheet.update_acell(f'{"A"}{row_to_write}', outputs["date"])
-        worksheet.update_acell(f'{"C"}{row_to_write}', time)
-        worksheet.update_acell(f'{"D"}{row_to_write}', outputs["amount"])
-        worksheet.update_acell(f'{"E"}{row_to_write}', outputs["category"])
-        worksheet.update_acell(f'{"G"}{row_to_write}', outputs["note"])
+        worksheet.update_acell(f'{column_indices["날짜"]}{row_to_write}', outputs["date"])
+        worksheet.update_acell(f'{column_indices["세부시간"]}{row_to_write}', time)
+        worksheet.update_acell(f'{column_indices["금액"]}{row_to_write}', outputs["amount"])
+        worksheet.update_acell(f'{column_indices["영지사신 구분"]}{row_to_write}', outputs["category"])
+        worksheet.update_acell(f'{column_indices["비고(optional)"]}{row_to_write}', outputs["note"])
     
     def run(self, user_json, user_id, outputs) -> PostProcessOutput:
         """
@@ -166,18 +171,18 @@ class PostProcessor(BasePostProcessor):
                 errors = self.errors
             )
         else:
-            # try:
-            json_key_path, sheet_url = user_json[user_id]
-            self.append_value_to_column(json_key_path, sheet_url, outputs)
-            return PostProcessOutput(
-                trial = True,
-                outputs = "Yes~~~",
-                errors = self.errors
-            )
-            # except:
-            #     self.errors.append(["Wow~~~"])
-            #     return PostProcessOutput(
-            #         trial = False,
-            #         outputs = None,
-            #         errors = self.errors
-            #     )
+            try:
+                json_key_path, sheet_url = user_json[user_id]
+                self.append_value_to_column(json_key_path, sheet_url, outputs)
+                return PostProcessOutput(
+                    trial = True,
+                    outputs = "GOD bless you ~",
+                    errors = self.errors
+                )
+            except:
+                self.errors.append("Invalid values in user_id's user_json.")
+                return PostProcessOutput(
+                    trial = False,
+                    outputs = None,
+                    errors = self.errors
+                )

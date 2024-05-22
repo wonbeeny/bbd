@@ -25,7 +25,7 @@ class Attrs(metaclass=ABCMeta):
         [TODO] if we need more checking, then we will develop more.
         """
         if user_id is None:
-            error = [f"Please check `{user_id}`. user_id must not be None."]
+            error = f"Please check `{user_id}`. user_id must not be None."
             return error
         else:
             return None
@@ -37,12 +37,12 @@ class Attrs(metaclass=ABCMeta):
         try:
             components = [item.strip() for item in user_text.split('/')]
             if len(components) < 2:
-                error = [f"Please check `{user_text}`. user_text must have `/` at least one."]
+                error = f"Please check `{user_text}`. user_text must have `/` at least one."
                 return error    # text 입력시 반드시 / 가 2개 이상 (google sheet 등록 및 지출 내역 등록 시 / 는 1개 이상이어야 됨)
             else:
                 return None    # 정상적인 text 입력 형태
         except:
-            error = [f"Please check `{user_text}`. user_text must not be None."]
+            error = f"Please check `{user_text}`. user_text must not be None."
             return error    # text 를 입력하지 않았을 때
         
     @abstractmethod
@@ -81,7 +81,7 @@ class BasePreProcessor(Attrs):
         if check_text is not None:
             errors.append(check_text)
             
-        self.errors = errors    # input 에 대한 검증 결과 error 가 있는지 없는지를 output 으로 내보내기 위함
+        self.errors = [error for error in errors if error is not None]    # input 에 대한 검증 결과 error 가 있는지 없는지를 output 으로 내보내기 위함
 
     def run(self):
         raise NotImplementedError("`run` method must be customized by task.")
@@ -105,7 +105,7 @@ class BasePostProcessor(Attrs):
     def set(self):
         if self.trial and self.errors != list():    # error message 가 있는데 trial 이 True 임
             self.trial = False
-            self.errors.append([f"self.trial is True but self.errors exists."])
+            self.errors.append(f"self.trial is True but self.errors exists.")
         
 
     def run(self):

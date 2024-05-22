@@ -29,7 +29,7 @@ def mk_Output(user_id, trial, logType=None, errors=[]):
     now = datetime.now()
     date_now = now.strftime('%Y-%m-%d %H:%M:%S')
     
-    _logs = '\n'.join([error[0] for error in errors])
+    _logs = '\n'.join([error for error in errors])
     logs = _logs if _logs != "" else None
     
     Output_final = {

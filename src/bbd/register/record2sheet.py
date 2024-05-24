@@ -172,7 +172,8 @@ class PostProcessor(BasePostProcessor):
             )
         else:
             try:
-                json_key_path, sheet_url = user_json[user_id]
+                json_key_path = user_json[user_id][api_key]
+                sheet_url = user_json[user_id][url]
                 self.append_value_to_column(json_key_path, sheet_url, outputs)
                 return PostProcessOutput(
                     trial = True,

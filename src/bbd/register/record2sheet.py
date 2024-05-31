@@ -129,10 +129,10 @@ class PostProcessor(BasePostProcessor):
 
         # 스프레드시트 오픈
         sheet = client.open_by_url(sheet_url)
-        worksheet = sheet.get_worksheet("지출 내역")  # 워크시트는 "지출 내역" 으로 고정하여 사용
+        worksheet = sheet.worksheet("Spend")  # 워크시트 명은 "Spend" 으로 고정하여 사용
         
         # Column 에 대한 index 찾기
-        headers = ["날짜", "세부시간", "금액", "영지사신 구분", "비고(optional)"]    # 찾을 헤더 목록 고정하여 사용
+        headers = ["날짜", "세부시간", "금액", "영지사신 구분", "내용"]    # 찾을 헤더 목록 고정하여 사용
         column_indices = find_sheet_columns(worksheet, headers)    # 헤더에 해당하는 열 찾기
         
         # D, E열 데이터 읽고 빈 Row 위치 찾기
@@ -147,12 +147,14 @@ class PostProcessor(BasePostProcessor):
         now = datetime.datetime.now()
         time = now.strftime('%H:%M')
         
+        num2alpha = {1:"A", 2:"B", 3:"C", 4:"D", 5:"E", 6:"F", 7:"G", 8:"H", 9:"I"}
+        
         # 지출 내역 입력
-        worksheet.update_acell(f'{column_indices["날짜"]}{row_to_write}', outputs["date"])
-        worksheet.update_acell(f'{column_indices["세부시간"]}{row_to_write}', time)
-        worksheet.update_acell(f'{column_indices["금액"]}{row_to_write}', outputs["amount"])
-        worksheet.update_acell(f'{column_indices["영지사신 구분"]}{row_to_write}', outputs["category"])
-        worksheet.update_acell(f'{column_indices["비고(optional)"]}{row_to_write}', outputs["note"])
+        worksheet.update_acell(f'{num2alpha[column_indices["날짜"]]}{row_to_write}', outputs["date"])
+        worksheet.update_acell(f'{num2alpha[column_indices["세부시간"]]}{row_to_write}', time)
+        worksheet.update_acell(f'{num2alpha[column_indices["금액"]]}{row_to_write}', outputs["amount"])
+        worksheet.update_acell(f'{num2alpha[column_indices["영지사신 구분"]]}{row_to_write}', outputs["category"])
+        worksheet.update_acell(f'{num2alpha[column_indices["내용"]]}{row_to_write}', outputs["note"])
     
     def run(self, user_json, user_id, outputs) -> PostProcessOutput:
         """
@@ -172,8 +174,8 @@ class PostProcessor(BasePostProcessor):
             )
         else:
             try:
-                json_key_path = user_json[user_id][api_key]
-                sheet_url = user_json[user_id][url]
+                json_key_path = user_json[user_id]["api_key"]
+                sheet_url = user_json[user_id]["url"]
                 self.append_value_to_column(json_key_path, sheet_url, outputs)
                 return PostProcessOutput(
                     trial = True,

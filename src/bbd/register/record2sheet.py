@@ -17,8 +17,11 @@ from ..utils import (
     format_amount,
     format_date_str,
     format_date_num,
-    find_sheet_columns
+    find_sheet_columns,
+    get_logger
 )
+
+logger = get_logger(__name__)
 
 class PreProcessor(BasePreProcessor):
     """
@@ -51,7 +54,9 @@ class PreProcessor(BasePreProcessor):
             result_dict["date"] = components[2]
             result_dict["note"] = components[3]
         else:    # / 가 5개 이상인 경우 에러 발생
-            self.errors.append(f"Please check `{self.user_text}`. user_text must have `/` maximum of three.")
+            message = f"Please check `{self.user_text}`. user_text must have `/` maximum of three."
+            logger.error(message)
+            self.errors.append(message)
             return None
         
         return result_dict
@@ -183,7 +188,9 @@ class PostProcessor(BasePostProcessor):
                     errors = self.errors
                 )
             except:
-                self.errors.append("Invalid values in user_id's user_json.")
+                message = "Invalid values in user_id's user_json."
+                logger.error(message)
+                self.errors.append(message)
                 return PostProcessOutput(
                     trial = False,
                     outputs = None,

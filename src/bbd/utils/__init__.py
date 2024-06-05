@@ -1,6 +1,7 @@
 # coding : utf-8
 # author : WONBEEN
 
+from .logging import get_logger
 from .category_utils import (
     format_category_match
 )

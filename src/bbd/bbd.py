@@ -6,11 +6,14 @@ from .base import (
     mk_Output
 )
 from .utils import (
-    read_json
+    read_json,
+    get_logger
 )
 from .register import (
     record2sheet
 )
+
+logger = get_logger(__name__)
 
 TASK_MAP = {
     "record": record2sheet
@@ -65,10 +68,13 @@ class worker(Attrs):
                     return mk_Output(self.user_id, True)
                 else:
                     logType = f"An error occurred in the PostProcessor class in {self.task}."
+                    logger.error(logType)
                     return mk_Output(self.user_id, False, logType, PostOutput.errors)
             else:
                 logType = f"An error occurred in the PreProcessor class in {self.task}."
+                logger.error(logType)
                 return mk_Output(self.user_id, False, logType, PreOutput.errors)
         except:
             logType = f"Invalid PostProcessor class in {self.task}."
+            logger.error(logType)
             return mk_Output(self.user_id, False, logType, PreOutput.errors)

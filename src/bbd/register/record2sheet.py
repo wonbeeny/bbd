@@ -27,7 +27,7 @@ class PreProcessor(BasePreProcessor):
     """
     고객이 입력한 지출 내역 text 를 전처리하여 구글 스프레드 시트에 입력하는 형태로 변환하는 클래스.
     
-    만약 고객이 입력한 지출 내역 text 형태가 가이드 문서와 다르다면, False 및 error message 를 return
+    만약 고객이 입력한 지출 내역 text 형태가 가이드 문서와 다르다면, False 및 error log return
     """
     def _extract_components(self) -> dict:
         """
@@ -55,9 +55,7 @@ class PreProcessor(BasePreProcessor):
             result_dict["note"] = components[3]
         else:    # / 가 5개 이상인 경우 에러 발생
             message = f"Please check `{self.user_text}`. user_text must have `/` maximum of three."
-            logger.error(message)
-            self.errors.append(message)
-            return None
+            raise NotImplementedError(message)
         
         return result_dict
     
@@ -66,60 +64,47 @@ class PreProcessor(BasePreProcessor):
         고객의 지출 내역을 전처리하여 return
         output 의 형태는 PreProcessOutput 로 고정
         """
-        if self.errors != list():    # input 이 잘못 입력된 경우, 모든 연산을 거치지 않기 위함
-            return PreProcessOutput(
-                trial = False,
-                outputs = None,
-                errors = self.errors
-            )
-        else:
-            result_dict = self._extract_components()
-            if result_dict is None:    # input 이 잘못 입력된 경우, 모든 연산을 거치지 않기 위함
-                return PreProcessOutput(
-                    trial = False,
-                    outputs = None,
-                    errors = self.errors
-                )
-            else:    # input 이 올바른 형태로 입력된 경우, run
-                category = result_dict["category"]
-                amount = result_dict["amount"]
-                date = result_dict["date"]
-                note = result_dict["note"]
+        result_dict = self._extract_components()
+        
+        category = result_dict["category"]
+        amount = result_dict["amount"]
+        date = result_dict["date"]
+        note = result_dict["note"]
 
-                # 입력한 카테고리를 변경
-                real_category = format_category_match(category)
+        # 입력한 카테고리를 변경
+        real_category = format_category_match(category)
 
-                # 입력한 금액의 형식을 파악 후 int 형식으로 변경
-                real_amount = format_amount(amount)
+        # 입력한 금액의 형식을 파악 후 float 형식으로 변경
+        real_amount = format_amount(amount)
 
-                # 입력한 날짜가 숫자 형식인지 아닌지 파악 후 YYYY.MM.DD 형식으로 변경
-                try:    # 숫자 형식
-                    check_type = copy.copy(date)
-                    for separator in [".", ",", "-"]:
-                        check_type = check_type.replace(separator, "")
-                    int(check_type)
-                    real_date = format_date_num(date)
-                except:    # 문자 형식
-                    real_date = format_date_str(date)
-                # 날짜를 안 적고 비고를 적은 경우(or 날짜를 적었는데 잘못 적은 경우), 날짜는 자동으로 오늘 날짜로 입력
-                if real_date is None:
-                    today = datetime.date.today()
-                    real_date = today.strftime('%y.%m.%d')
+        # 입력한 날짜가 숫자 형식인지 아닌지 파악 후 YYYY.MM.DD 형식으로 변경
+        try:    # 숫자 형식
+            check_type = copy.copy(date)
+            for separator in [".", ",", "-"]:
+                check_type = check_type.replace(separator, "")
+            int(check_type)
+            real_date = format_date_num(date)
+        except:    # 문자 형식
+            real_date = format_date_str(date)
+        # 날짜를 안 적고 비고를 적은 경우(or 날짜를 적었는데 잘못 적은 경우), 날짜는 자동으로 오늘 날짜로 입력
+        if real_date is None:
+            message = f"The date was `None` followed by default, and today's date was entered. \n user_text: {self.user_text}"
+            logger.info(message)
+            today = datetime.date.today()
+            real_date = today.strftime('%Y.%m.%d')    # YYYY.MM.DD
 
+        # outputs 정의
+        outputs = {
+            "category": real_category,    # 카테고리
+            "amount": real_amount,        # 금액
+            "date": real_date,            # [optional]날짜
+            "note": note                  # [optional]비고
+        }
 
-                outputs = {
-                    "category": real_category,    # 카테고리
-                    "amount": real_amount,        # 금액
-                    "date": real_date,            # [optional]날짜
-                    "note": note                  # [optional]비고
-                }
-
-                return PreProcessOutput(
-                    trial = True,
-                    outputs = outputs,
-                    errors = self.errors
-                )
-
+        return PreProcessOutput(
+            trial = True,
+            outputs = outputs
+        )
         
 
 class PostProcessor(BasePostProcessor):
@@ -128,13 +113,23 @@ class PostProcessor(BasePostProcessor):
     """    
     def append_value_to_column(self, json_key_path, sheet_url, outputs):
         # 구글 인증
-        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds = ServiceAccountCredentials.from_json_keyfile_name(json_key_path, scope)
-        client = gspread.authorize(creds)
+        try:
+            scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+            creds = ServiceAccountCredentials.from_json_keyfile_name(json_key_path, scope)
+            client = gspread.authorize(creds)
+        except Exception as e:
+            message = "Invalid Google Auth."
+            logger.error(message)
+            raise e
 
         # 스프레드시트 오픈
-        sheet = client.open_by_url(sheet_url)
-        worksheet = sheet.worksheet("Spend")  # 워크시트 명은 "Spend" 으로 고정하여 사용
+        try:
+            sheet = client.open_by_url(sheet_url)
+            worksheet = sheet.worksheet("Spend")  # 워크시트 명은 "Spend" 으로 고정하여 사용
+        except Exception as e:
+            message = "Invalid open spread sheet."
+            logger.error(message)
+            raise e
         
         # Column 에 대한 index 찾기
         headers = ["날짜", "세부시간", "금액", "영지사신 구분", "내용"]    # 찾을 헤더 목록 고정하여 사용
@@ -155,44 +150,35 @@ class PostProcessor(BasePostProcessor):
         num2alpha = {1:"A", 2:"B", 3:"C", 4:"D", 5:"E", 6:"F", 7:"G", 8:"H", 9:"I"}
         
         # 지출 내역 입력
-        worksheet.update_acell(f'{num2alpha[column_indices["날짜"]]}{row_to_write}', outputs["date"])
-        worksheet.update_acell(f'{num2alpha[column_indices["세부시간"]]}{row_to_write}', time)
-        worksheet.update_acell(f'{num2alpha[column_indices["금액"]]}{row_to_write}', outputs["amount"])
-        worksheet.update_acell(f'{num2alpha[column_indices["영지사신 구분"]]}{row_to_write}', outputs["category"])
-        worksheet.update_acell(f'{num2alpha[column_indices["내용"]]}{row_to_write}', outputs["note"])
+        try:
+            worksheet.update_acell(f'{num2alpha[column_indices["날짜"]]}{row_to_write}', outputs["date"])
+            worksheet.update_acell(f'{num2alpha[column_indices["세부시간"]]}{row_to_write}', time)
+            worksheet.update_acell(f'{num2alpha[column_indices["금액"]]}{row_to_write}', outputs["amount"])
+            worksheet.update_acell(f'{num2alpha[column_indices["영지사신 구분"]]}{row_to_write}', outputs["category"])
+            worksheet.update_acell(f'{num2alpha[column_indices["내용"]]}{row_to_write}', outputs["note"])
+        except Exception as e:
+            message = "Failed to write in worksheet."
+            logger.error(message)
+            raise e
     
-    def run(self, user_json, user_id, outputs) -> PostProcessOutput:
+    def run(self, json_key_path, sheet_url, outputs) -> PostProcessOutput:
         """
         Args:
-            user_json (:obj: `Dict[str, List]`):
-                고객의 정보 (API Key & Sheet URL)
-            user_id (:obj:`str`):
-                고객의 고유 번호
+            json_key_path (:obj: `str`):
+                고객의 API Key 경로
+            sheet_url (:obj:`str`):
+                고객의 스프레드시트 url
             outputs (:obj:`Dict[str, str]`):
                 고객이 저장하고자 하는 지출 내역을 전처리(PreProcessor)한 결과
         """
-        if not self.trial:
-            return PostProcessOutput(
-                trial = False,
-                outputs = None,
-                errors = self.errors
-            )
-        else:
-            try:
-                json_key_path = user_json[user_id]["api_key"]
-                sheet_url = user_json[user_id]["url"]
-                self.append_value_to_column(json_key_path, sheet_url, outputs)
-                return PostProcessOutput(
-                    trial = True,
-                    outputs = "GOD bless you ~",
-                    errors = self.errors
-                )
-            except:
-                message = "Invalid values in user_id's user_json."
-                logger.error(message)
-                self.errors.append(message)
-                return PostProcessOutput(
-                    trial = False,
-                    outputs = None,
-                    errors = self.errors
-                )
+        try:
+            self.append_value_to_column(json_key_path, sheet_url, outputs)
+        except Exception as e:
+            message = "Sheet registration failed."
+            logger.error(message)
+            raise e
+            
+        return PostProcessOutput(
+            trial = True,
+            outputs = "GOD bless you ~"
+        )

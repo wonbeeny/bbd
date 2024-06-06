@@ -1,6 +1,7 @@
 # coding : utf-8
 # author : WONBEEN
 
+import os
 from logging import (
     DEBUG,
     INFO,
@@ -39,7 +40,7 @@ class ConsoleFormatter(Formatter):
     """
 
     _LEVEL = '[%(levelname)s]'
-    _FORMAT = ' [%(asctime)s][TwinDoc][%(name)s][%(lineno)s] %(message)s'
+    _FORMAT = ' [%(asctime)s][bbd][%(name)s][%(lineno)s] %(message)s'
 
     FORMATS = {
         DEBUG: _LEVEL+_FORMAT,

@@ -1,14 +1,8 @@
 # coding : utf-8
 # author : WONBEEN
 
-from .base import (
-    Attrs, 
-    mk_Output
-)
-from .utils import (
-    read_json,
-    get_logger
-)
+from .base import Attrs
+from .utils import read_json, get_logger
 from .register import (
     record2sheet
 )
@@ -29,7 +23,6 @@ class worker(Attrs):
         """
         task_module = self._get_task_module(task)
         self.task = task
-        self.user_id = kwargs["user_id"] if "user_id" in kwargs else None
         self.user_text = kwargs["user_text"] if "user_text" in kwargs else None
         self.set(task_module)
 
@@ -52,29 +45,21 @@ class worker(Attrs):
         self.preprocessor = module.PreProcessor
         self.postprocessor = module.PostProcessor
 
-    def run(self, user_json):        
+    def run(self, json_key_path, sheet_url):        
         if self.task == "record":
-            preprocessor = self.preprocessor(self.user_id, self.user_text)
+            preprocessor = self.preprocessor(self.user_text)
             PreOutput = preprocessor()
+            logger.info("Success PreProcessor.")
         else:
             pass    # 다른 task 들어오면 상황 봐서 추가할수도 있음
-        
+                  
         try:
-            if PreOutput.trial:                
-                PostProcessor = self.postprocessor(PreOutput.trial, PreOutput.errors)
-                PostOutput = PostProcessor(user_json, self.user_id, PreOutput.outputs)
-                
-                if PostOutput.trial:
-                    return mk_Output(self.user_id, True)
-                else:
-                    logType = f"An error occurred in the PostProcessor class in {self.task}."
-                    logger.error(logType)
-                    return mk_Output(self.user_id, False, logType, PostOutput.errors)
-            else:
-                logType = f"An error occurred in the PreProcessor class in {self.task}."
-                logger.error(logType)
-                return mk_Output(self.user_id, False, logType, PreOutput.errors)
-        except:
-            logType = f"Invalid PostProcessor class in {self.task}."
-            logger.error(logType)
-            return mk_Output(self.user_id, False, logType, PreOutput.errors)
+            PostProcessor = self.postprocessor()
+            PostOutput = PostProcessor(json_key_path, sheet_url, PreOutput.outputs)
+            logger.info("Success PostProcessor.")
+        except Exception as e:
+            message = f"Invalid PostProcessor class in {self.task}."
+            logger.error(message)
+            raise e
+            
+        return PostOutput

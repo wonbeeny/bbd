@@ -23,7 +23,7 @@ def format_date_str(input_date: str) -> str:
                 date_object = today
             elif key == "내일":
                 date_object = today + datetime.timedelta(days=1)
-            date = date_object.strftime("%Y.%m.%d")    # YY.MM.DD
+            date = date_object.strftime("%Y.%m.%d")    # YYYY.MM.DD
             return date
     return None    # text 입력이 잘못된 경우 None 값 반영
     
@@ -51,7 +51,9 @@ def format_date_num(input_date: str) -> str:
                 # 날짜 객체 생성 및 포맷
                 date_object = datetime.datetime.strptime(date_str, date_format)
                 return date_object.strftime("%Y.%m.%d")
-            except ValueError:
-                return None
+            except Exception as e:
+                message = f"{input_date} is wrong."
+                logger.error(message)
+                raise e
 
     return None

@@ -32,7 +32,8 @@ def find_sheet_columns(worksheet, headers):
     for header in headers:
         if header in first_row:
             column_indices[header] = first_row.index(header) + 1  # 1부터 시작하도록 조정
-        else:
-            column_indices[header] = None  # 없을 경우 None
+        else:  # 없을 경우 stop
+            message = f"Please check `{header}` in sheet."
+            raise NotImplementedError(message)
 
     return column_indices

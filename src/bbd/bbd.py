@@ -46,16 +46,13 @@ class worker(Attrs):
         self.postprocessor = module.PostProcessor
 
     def run(self, json_key_path, sheet_url):        
-        if self.task == "record":
-            preprocessor = self.preprocessor(self.user_text)
-            PreOutput = preprocessor()
-            logger.info("Success PreProcessor.")
-        else:
-            pass    # 다른 task 들어오면 상황 봐서 추가할수도 있음
+        preprocessor = self.preprocessor(self.user_text, self.task)
+        PreOutput = preprocessor()
+        logger.info("Success PreProcessor.")
                   
         try:
-            PostProcessor = self.postprocessor()
-            PostOutput = PostProcessor(json_key_path, sheet_url, PreOutput.outputs)
+            PostProcessor = self.postprocessor(json_key_path, sheet_url)
+            PostOutput = PostProcessor(PreOutput.outputs)
             logger.info("Success PostProcessor.")
         except Exception as e:
             message = f"Invalid PostProcessor class in {self.task}."

@@ -6,6 +6,9 @@ import os
 from abc import *
 from typing import Any, Callable
 
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
 from ..utils import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +26,7 @@ class Attrs(metaclass=ABCMeta):
     def set(self):
         pass
 
-    def _check_text(self, user_text):
+    def _check_record_text(self, user_text):
         """
         [TODO] if we need more checking, then we will develop more.
         """
@@ -39,6 +42,13 @@ class Attrs(metaclass=ABCMeta):
             message = f"Please check `{user_text}`. user_text must not be None."
             logger.error(message)    # text 를 입력하지 않았을 때
             raise e
+    
+    def _check_exist_text(self, user_text):
+        if user_text is None:
+            message = f"Please check `{user_text}`. user_text must not be None."
+            logger.error(message)    # text 를 입력하지 않았을 때
+            raise e
+            
         
     @abstractmethod
     def run(self):
@@ -55,17 +65,20 @@ class BasePreProcessor(Attrs):
     """
     각 task에 맞게 정의하는 `PreProcessor` 클래스의 base class.
     """
-    def __init__(self, user_text=None):
+    def __init__(self, user_text=None, task=None):
         """
         Args:
             user_text (:obj:`str`):
                 고객이 요청한 text 에 / 가 2개 이상 있는지 체크
         """
         self.user_text = user_text
-        self.set()
+        self.set(task)
 
-    def set(self):
-        check_text = self._check_text(self.user_text)
+    def set(self, task):
+        if task == "record":
+            self._check_record_text(self.user_text)
+        else:
+            self._check_exist_text(self.user_text)    # 다른 task 들어오면 상황 봐서 추가할수도 있음
 
     def run(self):
         raise NotImplementedError("`run` method must be customized by task.")
@@ -76,16 +89,33 @@ class BasePostProcessor(Attrs):
     각 task에 맞게 정의하는 `PostProcessor` 클래스의 base class.
     
     Args:
-        trial (:obj:`bool`):
-            에러 없이 정상적으로 동작하고 있는지 체크
-        errors (:obj:`List[str]`):
-            에러 발생 시 에러 메세지 확인을 위함
+        json_key_path (:obj: `str`):
+            고객의 API Key 경로
+        sheet_url (:obj:`str`):
+            고객의 스프레드시트 url
     """
-    def __init__(self):
-        self.set()
+    def __init__(self, json_key_path, sheet_url):
+        self.sheet = self.set(json_key_path, sheet_url)
 
-    def set(self):
-        pass
+    def set(self, json_key_path, sheet_url):
+        # 구글 인증
+        try:
+            scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+            creds = ServiceAccountCredentials.from_json_keyfile_name(json_key_path, scope)
+            client = gspread.authorize(creds)
+        except Exception as e:
+            message = "Invalid Google Auth."
+            logger.error(message)
+            raise e
+
+        # 스프레드시트 오픈
+        try:
+            sheet = client.open_by_url(sheet_url)
+        except Exception as e:
+            message = "Invalid open spread sheet."
+            logger.error(message)
+            raise e
+        return sheet
 
     def run(self):
         raise NotImplementedError("`run` method must be customized by task.")

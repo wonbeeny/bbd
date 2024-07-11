@@ -3,8 +3,8 @@
 
 import copy
 import datetime
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+# import gspread
+# from oauth2client.service_account import ServiceAccountCredentials
 
 from ..base import (
     BasePreProcessor,
@@ -78,9 +78,11 @@ class PreProcessor(BasePreProcessor):
         real_amount = format_amount(amount)
 
         # 입력한 날짜가 숫자 형식인지 아닌지 파악 후 YYYY.MM.DD 형식으로 변경
+        if date != note:
+            note += f"  입력한 날짜: {date}"
         try:    # 숫자 형식
             check_type = copy.copy(date)
-            for separator in [".", ",", "-"]:
+            for separator in [".", ",", "-", " "]:
                 check_type = check_type.replace(separator, "")
             int(check_type)
             real_date = format_date_num(date)
@@ -111,21 +113,10 @@ class PostProcessor(BasePostProcessor):
     """
     PreProcessor 에서 추출한 결과를 활용하여 고객의 구글 스프레드 시트에 저장하는 클래스
     """    
-    def append_value_to_column(self, json_key_path, sheet_url, outputs):
-        # 구글 인증
-        try:
-            scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-            creds = ServiceAccountCredentials.from_json_keyfile_name(json_key_path, scope)
-            client = gspread.authorize(creds)
-        except Exception as e:
-            message = "Invalid Google Auth."
-            logger.error(message)
-            raise e
-
+    def append_value_to_column(self, outputs):
         # 스프레드시트 오픈
         try:
-            sheet = client.open_by_url(sheet_url)
-            worksheet = sheet.worksheet("Spend")  # 워크시트 명은 "Spend" 으로 고정하여 사용
+            worksheet = self.sheet.worksheet("Spend")  # 워크시트 명은 "Spend" 으로 고정하여 사용
         except Exception as e:
             message = "Invalid open spread sheet."
             logger.error(message)
@@ -148,6 +139,7 @@ class PostProcessor(BasePostProcessor):
         time = now.strftime('%H:%M')
         
         num2alpha = {1:"A", 2:"B", 3:"C", 4:"D", 5:"E", 6:"F", 7:"G", 8:"H", 9:"I"}
+        weekdays_korean = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
         
         # 지출 내역 입력
         try:
@@ -156,23 +148,25 @@ class PostProcessor(BasePostProcessor):
             worksheet.update_acell(f'{num2alpha[column_indices["금액"]]}{row_to_write}', outputs["amount"])
             worksheet.update_acell(f'{num2alpha[column_indices["영지사신 구분"]]}{row_to_write}', outputs["category"])
             worksheet.update_acell(f'{num2alpha[column_indices["내용"]]}{row_to_write}', outputs["note"])
+            
+            date = datetime.datetime.strptime(outputs["date"], "%Y.%m.%d")
+            weekday_index = date.weekday()
+            weekday = weekdays_korean.get("weekday_index")
+            worksheet.update_acell(f'{num2alpha[column_indices["요일"]]}{row_to_write}', weekday)
+            worksheet.update_acell(f'{num2alpha[column_indices["날짜 구분"]]}{row_to_write}', outputs["date"][:-3])
         except Exception as e:
             message = "Failed to write in worksheet."
             logger.error(message)
             raise e
     
-    def run(self, json_key_path, sheet_url, outputs) -> PostProcessOutput:
+    def run(self, outputs) -> PostProcessOutput:
         """
         Args:
-            json_key_path (:obj: `str`):
-                고객의 API Key 경로
-            sheet_url (:obj:`str`):
-                고객의 스프레드시트 url
             outputs (:obj:`Dict[str, str]`):
                 고객이 저장하고자 하는 지출 내역을 전처리(PreProcessor)한 결과
         """
         try:
-            self.append_value_to_column(json_key_path, sheet_url, outputs)
+            self.append_value_to_column(outputs)
         except Exception as e:
             message = "Sheet registration failed."
             logger.error(message)

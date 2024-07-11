@@ -78,8 +78,6 @@ class PreProcessor(BasePreProcessor):
         real_amount = format_amount(amount)
 
         # 입력한 날짜가 숫자 형식인지 아닌지 파악 후 YYYY.MM.DD 형식으로 변경
-        if date != note:
-            note += f"  입력한 날짜: {date}"
         try:    # 숫자 형식
             check_type = copy.copy(date)
             for separator in [".", ",", "-", " "]:
@@ -123,7 +121,7 @@ class PostProcessor(BasePostProcessor):
             raise e
         
         # Column 에 대한 index 찾기
-        headers = ["날짜", "세부시간", "금액", "영지사신 구분", "내용"]    # 찾을 헤더 목록 고정하여 사용
+        headers = ["날짜", "세부시간", "금액", "영지사신 구분", "내용", "요일", "날짜 구분"]    # 찾을 헤더 목록 고정하여 사용
         column_indices = find_sheet_columns(worksheet, headers)    # 헤더에 해당하는 열 찾기
         
         # D, E열 데이터 읽고 빈 Row 위치 찾기
@@ -151,7 +149,7 @@ class PostProcessor(BasePostProcessor):
             
             date = datetime.datetime.strptime(outputs["date"], "%Y.%m.%d")
             weekday_index = date.weekday()
-            weekday = weekdays_korean.get("weekday_index")
+            weekday = weekdays_korean[weekday_index]
             worksheet.update_acell(f'{num2alpha[column_indices["요일"]]}{row_to_write}', weekday)
             worksheet.update_acell(f'{num2alpha[column_indices["날짜 구분"]]}{row_to_write}', outputs["date"][:-3])
         except Exception as e:

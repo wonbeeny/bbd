@@ -79,7 +79,7 @@ def format_date_num(input_date: str) -> str:
             date_str = "".join(match.groups())
             try:
                 # 현재 연도를 사용해야 할 경우에만 처리
-                if len(date_str) == 4:
+                if len(date_str) in [2, 3, 4]:
                     date_str = str(datetime.date.today().year) + date_str
                     date_format = "%Y%m%d"
                 # 날짜 객체 생성 및 포맷

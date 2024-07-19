@@ -20,4 +20,4 @@ class PostProcessOutput:
     후처리의 Output 형태를 고정하기 위함
     """
     trial: bool = None    # True or False
-    outputs: str = None    # 지출 기록은 "success", 통계치는 image path
+    outputs: str = None    # 지출 기록은 "success", 지출 내역 확인은 text

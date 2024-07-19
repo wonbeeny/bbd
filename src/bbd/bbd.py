@@ -4,13 +4,15 @@
 from .base import Attrs
 from .utils import read_json, get_logger
 from .register import (
-    record2sheet
+    record2sheet,
+    check2record
 )
 
 logger = get_logger(__name__)
 
 TASK_MAP = {
-    "record": record2sheet
+    "record": record2sheet,
+    "check": check2record
 } # task와 모듈을 매핑
 
 class worker(Attrs):

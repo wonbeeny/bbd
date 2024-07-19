@@ -77,8 +77,11 @@ class BasePreProcessor(Attrs):
     def set(self, task):
         if task == "record":
             self._check_record_text(self.user_text)
+        if task == "check":
+            self._check_exist_text(self.user_text)
         else:
-            self._check_exist_text(self.user_text)    # 다른 task 들어오면 상황 봐서 추가할수도 있음
+            message = f"Please check `task`. Your task is not exist."
+            logger.error(message)    # text 를 입력하지 않았을 때
 
     def run(self):
         raise NotImplementedError("`run` method must be customized by task.")
